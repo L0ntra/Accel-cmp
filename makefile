@@ -1,15 +1,16 @@
+.PHONY: cuda
+.PHONY: phi
+
 Default:
 	$(MAKE) cuda
 	$(MAKE) phi
 
-cuda:
-	nvcc cuda/cuda.cu -o cuda/cuda.out
-	./cuda/cuda.out 2
 
+cuda:
+	$(MAKE) -C cuda
 
 phi:
-	ls
-
+	$(MAKE) -C phi
 
 clean:
 	rm cuda/cuda.out
