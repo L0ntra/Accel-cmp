@@ -1,5 +1,6 @@
 .PHONY: cuda
 .PHONY: phi
+.PHONY: data
 
 Default:
 	$(MAKE) cuda
@@ -12,5 +13,7 @@ cuda:
 phi:
 	$(MAKE) -C phi
 
+data:
+	$(MAKE) -C data ARGS=${ARGS}
 clean:
 	rm cuda/cuda.out
