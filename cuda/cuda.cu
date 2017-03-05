@@ -16,23 +16,15 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <stdio.h>
-#include <stdlib.h>
+
+#include "../data/readdata.h"
 #include <cuda.h>
 
-void dispInfo() {
-  int deviceCount;
+void getInfo(int *threadsPerBlock) {
   cudaDeviceProp deviceProp;
-  cudaGetDeviceCount(&deviceCount);
-  printf("Num Cuda Devices: %i\n",deviceCount);
-  for(int i = 0; i <  deviceCount; i++) {
-    cudaGetDeviceProperties(&deviceProp, i);
-    printf("Name:         %s\n", deviceProp.name);
-    printf("Thrads/Block: %i\n", deviceProp.maxThreadsPerBlock);
-    printf("M.m:	  %i.%i\n", deviceProp.major, deviceProp.minor);
-  }
+  cudaGetDeviceProperties(&deviceProp, 0);
+  *threadsPerBlock = deviceProp.maxThreadsPerBlock;
 }
-
 
 void matrixMultiply(int* A, int* B, int* C, int n) {
   for(int i = 0; i < n; i++)
@@ -42,7 +34,7 @@ void matrixMultiply(int* A, int* B, int* C, int n) {
 }
 
 __global__ 
-void matrixMultiplyKernel(int* A, int* B, int* C, int n) {
+void matrixMultiplyKernel(float* A, float* B, float* C, int n) {
   int j = blockDim.x * blockIdx.x + threadIdx.x; //ROW
   int i = blockDim.y * blockIdx.y + threadIdx.y; //COL
 
@@ -54,9 +46,10 @@ void matrixMultiplyKernel(int* A, int* B, int* C, int n) {
   }
 }
 
-void matrixMultiplyCUDA(int* A, int* B, int* C, int n) {
-  int size = n * n * sizeof(int);
-  int *d_A, *d_B, *d_C;
+void matrixMultiplyCUDA(float *A, float *B, float *C, int n) {
+  int size = n * n * sizeof(float);
+  float *d_A, *d_B, *d_C;
+  
   //Allocate
   cudaMalloc((void**) &d_A, size);
   cudaMalloc((void**) &d_B, size);
@@ -82,51 +75,31 @@ void matrixMultiplyCUDA(int* A, int* B, int* C, int n) {
 }
 
 int main(int argc, char *argv[]) {
-  dispInfo();
-  int n;
-  if(argc != 2
-  || (n = (int) strtol(argv[1], (char**) NULL, 10)) == 1
-  || n < 1) {
-    printf("Error: Call with int > 0\n");
-    return 1;
-  }
+//Read Device
+  int blockPerThread;
+  getInfo(&blockPerThread);
+  printf("%i\n", blockPerThread);
 
-  int h_A[n][n], h_B[n][n], h_C[n][n], h_D[n][n];
-  for(int i = 0; i < n; i++)
-    for(int j = 0; j < n; j++) {
-      h_A[i][j] = h_B[i][j] = i * n + j;
-      h_C[i][j] = h_D[i][j] = 0;
-    }
+//Read File
+  int m, n;
+  char *filename = argv[1];
+  float *data = readfile(filename, &n, &m);
 
-  matrixMultiply((int *) &h_A, (int *) &h_B, (int *) &h_C, n);
-  matrixMultiplyCUDA((int *) &h_A, (int *) &h_B, (int *) &h_D, n);
-  
-  for(int i = 0; i < n; i++) {
-    for(int j = 0; j < n; j++)
-      printf("%i ", h_A[i][j]);
+  printf("%i, %i, \n", m, n);
+  for(int i = 0; i < m; i++) {
+    for(int j = 0; j < n; j ++) {
+      printf("%f ", data[i * n + j]);
+      }
     printf("\n");
   }
-  printf("\n");
 
-  for(int i = 0; i < n; i++) {
-    for(int j = 0; j < n; j++)
-      printf("%i ", h_B[i][j]);
-    printf("\n");
-  }
-  printf("\n");
+  free(data);
 
-  for(int i = 0; i < n; i++) {
-    for(int j = 0; j < n; j++)
-      printf("%i ", h_C[i][j]);
-    printf("\n");
-  }
-  printf("\n");
+  /*
+  matrixMultiply((float *) &h_A, (float *) &h_B, (float *) &h_C, n);
+  */
 
-  for(int i = 0; i < n; i++) {
-    for(int j = 0; j < n; j++)
-      printf("%i ", h_D[i][j]);
-    printf("\n");
-  }  
 
-  return 0;
+ return 0;
 }
+
