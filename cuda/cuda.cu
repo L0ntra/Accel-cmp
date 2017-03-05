@@ -26,27 +26,31 @@ void getInfo(int *threadsPerBlock) {
   *threadsPerBlock = deviceProp.maxThreadsPerBlock;
 }
 
-void matrixMultiply(int* A, int* B, int* C, int n) {
-  for(int i = 0; i < n; i++)
-    for(int j = 0; j < n; j++)
-      for(int k = 0; k < n; k++)
-        C[i * n + j] += A[i * n + k] * B[k * n + j];
+void matrixMultiply(float A[], float B[], float C[], int m) {
+  float temp;
+  for(int i = 0; i < m; i++)
+    for(int j = 0; j < m; j++) {
+      temp = 0;
+      for(int k = 0; k < m; k++)
+        temp += A[i * m + k] * B[k * m + j];
+      C[i * m + j] = temp;
+    }
 }
 
 __global__ 
-void matrixMultiplyKernel(float* A, float* B, float* C, int n) {
+void matrixMultiplyKernel(float A[], float B[], float C[], int n) {
   int j = blockDim.x * blockIdx.x + threadIdx.x; //ROW
   int i = blockDim.y * blockIdx.y + threadIdx.y; //COL
 
   if((i < n) && (j < n)) {
-    int temp = 0;
+    float temp = 0;
     for(int k = 0; k < n; k++)
       temp += A[i * n + k] * B[k * n + j];
     C[i * n + j] = temp;
   }
 }
 
-void matrixMultiplyCUDA(float *A, float *B, float *C, int n) {
+void matrixMultiplyCUDA(float A[], float B[], float C[], int n) {
   int size = n * n * sizeof(float);
   float *d_A, *d_B, *d_C;
   
@@ -75,30 +79,31 @@ void matrixMultiplyCUDA(float *A, float *B, float *C, int n) {
 }
 
 int main(int argc, char *argv[]) {
-//Read Device
+  //Read Device
   int blockPerThread;
   getInfo(&blockPerThread);
   printf("%i\n", blockPerThread);
 
-//Read File
+  //Read File(s)
   int m, n;
   char *filename = argv[1];
-  float *data = readfile(filename, &n, &m);
+  float *h_A = readfile(filename, &m, &n);
+  float *h_C = (float *) malloc(sizeof(float) * m * n);
+  float *h_D = (float *) malloc(sizeof(float) * m * n);
 
-  printf("%i, %i, \n", m, n);
+  //Do Computation
+  matrixMultiplyCUDA(h_A, h_A, h_C, n);
+  matrixMultiply(h_A, h_A, h_D, n);
+
+  //Print Solution
   for(int i = 0; i < m; i++) {
-    for(int j = 0; j < n; j ++) {
-      printf("%f ", data[i * n + j]);
-      }
+    for(int j = 0; j < n; j++) {
+      printf("%f = %f (%s) ", h_C[i * m + j], h_D[i * m + j], (h_C[i * m + j] == h_D[i * m + j])? "True" : "False");
+    }
     printf("\n");
   }
 
-  free(data);
-
-  /*
-  matrixMultiply((float *) &h_A, (float *) &h_B, (float *) &h_C, n);
-  */
-
+  free(h_A); free(h_C); free(h_D);
 
  return 0;
 }
