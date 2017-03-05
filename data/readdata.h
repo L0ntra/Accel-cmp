@@ -16,29 +16,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "readdata.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-// Reads floating point data into an array from a file where the first 2 lines 
-// of the file are the dimensions of the array and remaining lines are the 
-// floting point values that fill the m x n arraiy.
-// *** REMEMBER TO FREE THE RETURNED ARRA *** //
-float * readfile(const char *filename, int *m, int *n) {
-  FILE *file = fopen(filename, "r");
-
-  //Read m and n from the first two lines 
-  fscanf(file, "%d", m);
-  fscanf(file, "%d", n);
-
-  //Allocate the Array
-  float *data = (float *) malloc(sizeof(float) * *m * *n);
-
-  //Fill the data
-  for(int i = 0; i < *m; i++) {
-    for(int j = 0; j < *n; j++) {
-      fscanf(file, "%f", &data[i * *n + j]);
-    }
-  }
-
-  fclose(file);
-  return data;
-}
+float * readfile(const char*, int*, int*);

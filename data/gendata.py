@@ -21,19 +21,18 @@ import random
 
 def main(n, m, filename):
   random.seed()
-  #Generate random numbers where 0 <= num < 10000
-  data = [[random.random() * 10 ** random.randint(0, 4) for j in range(0, m)] for i in range(0, n)]
-  
-  #Write file
+
   file = open(filename, 'w')
   file.write(str(n)); file.write("\n")
   file.write(str(m)); file.write("\n")
-  for row in data:
-    for num in row:
-      file.write(str(num)); file.write("\n")
+  for i in range(0, m):
+    for j in range(0, n):
+      file.write(str(random.random() * 10 ** random.randint(0, 4)))
+      file.write("\n")
+
   file.close()
 
-  print(n, "x", m, " file generaged as '", filename, "'", sep = '')
+  print(m, "x", n, " file generaged as '", filename, "'", sep = '')
 
 if __name__ == "__main__":
   if len(sys.argv) == 2:
