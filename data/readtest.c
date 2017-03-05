@@ -16,7 +16,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "readdata.c"
+#include "readdata.h"
 //For testing purposes
 int main(int argc, char* argv[]) {
   int m, n;
