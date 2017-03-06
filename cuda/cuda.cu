@@ -18,6 +18,7 @@
 
 
 #include "../data/readdata.h"
+#include "cuda.h"
 #include <cuda.h>
 
 void getInfo(int *threadsPerBlock, size_t *sharedMemPerBlock) {
@@ -27,52 +28,27 @@ void getInfo(int *threadsPerBlock, size_t *sharedMemPerBlock) {
   *sharedMemPerBlock = deviceProp.sharedMemPerBlock;
 }
 
-void matrixMultiply(float A[], float B[], float C[], int m) {
-  float temp;
-  for(int i = 0; i < m; i++)
-    for(int j = 0; j < m; j++) {
-      temp = 0;
-      for(int k = 0; k < m; k++)
-        temp += A[i * m + k] * B[k * m + j];
-      C[i * m + j] = temp;
-    }
-}
-
-
-__global__ 
-void matrixMultiplyKernel(float A[], float B[], float C[], int m) {
-  int j = blockDim.x * blockIdx.x + threadIdx.x; //COL
-  int i = blockDim.y * blockIdx.y + threadIdx.y; //ROW
-
-  if((i < m) && (j < m)) {
-    float temp = 0;
-    for(int k = 0; k < m; k++)
-      temp += A[i * m + k] * B[k * m + j];
-    C[i * m + j] = temp;
-  }
-}
-
-
 __global__
-void matrixMultiplyTileKernel(float A[], float B[], float C[], int m, unsigned int maxArrSize) {
+void matrixMultiplyTileKernel(float A[], float B[], float C[], int w) {
   int j = blockDim.x * blockIdx.x + threadIdx.x; //COL
   int i = blockDim.y * blockIdx.y + threadIdx.y; //ROW
 
   float temp = 0;
-  extern __shared__ float s_A[];
-  extern __shared__ float s_B[];
+  __shared__ float s_A[TILE_WIDTH][TILE_WIDTH];
+  __shared__ float s_B[TILE_WIDTH][TILE_WIDTH];
 
-  if((i < m) && (j < m)) {
-    //Copy Data to shared memory
-    s_A[i * m + j] = A[i * m + j];
-    s_B[j * m + i + maxArrSize] = B[j * m + i];
+
+  for(int k = 0; k < w/TILE_WIDTH; k++) {
+    s_A[threadIdx.y][threadIdx.x] = A[i * w + k * TILE_WIDTH + threadIdx.x];
+    s_B[threadIdx.y][threadIdx.x] = B[(k * TILE_WIDTH + threadIdx.y) * w + j];
     __syncthreads();
-  
-    for(int k = 0; k < m; k++)
-      temp += s_A[i * m + k] * s_B[k * m + j + maxArrSize];
-    
-    C[i * m + j] = temp;
+
+    for(int h = 0; h < TILE_WIDTH; h++)
+      temp += s_A[threadIdx.y][h] * s_B[h][threadIdx.x];
+    __syncthreads();
   }
+
+  C[i * w + j] = temp;
 }
 
 void matrixMultiplyCUDA(float A[], float B[], float C[], int n, 
@@ -89,14 +65,12 @@ void matrixMultiplyCUDA(float A[], float B[], float C[], int n,
   cudaMemcpy(d_A, A, size, cudaMemcpyHostToDevice);
   cudaMemcpy(d_B, B, size, cudaMemcpyHostToDevice);
 
-  unsigned int maxArrSize = 32;//sharedMemPerBlock / 4;
   float blk = 32.0;
   dim3 dimGrid(ceil(n/blk), ceil(n/blk), 1);
   dim3 dimBlock(blk, blk, 1);
 
   //PerformCalculation
-//  matrixMultiplyKernel<<<dimGrid, dimBlock>>>(d_A, d_B, d_C, n);
-  matrixMultiplyTileKernel<<<dimGrid, dimBlock, maxArrSize>>>(d_A, d_B, d_C, n, maxArrSize);
+  matrixMultiplyTileKernel<<<dimGrid, dimBlock>>>(d_A, d_B, d_C, n);
 
   //Copy Solution
   cudaMemcpy(C, d_C, size, cudaMemcpyDeviceToHost);
@@ -123,18 +97,6 @@ int main(int argc, char *argv[]) {
 
   //Do Computation
   matrixMultiplyCUDA(h_A, h_A, h_C, n, threadPerBlock, sharedMemPerBlock);
-  matrixMultiply(h_A, h_A, h_D, n);
-
-  //Print Solution
-  for(int i = 0; i < m; i++) {
-    for(int j = 0; j < n; j++) {
-      printf("%f = %f (%s) ", 
-        h_C[i * m + j], 
-        h_D[i * m + j],
-        (h_C[i * m + j] == h_D[i * m + j])? "True" : "False");
-    }
-    printf("\n");
-  }
 
   free(h_A); free(h_C); free(h_D);
 
