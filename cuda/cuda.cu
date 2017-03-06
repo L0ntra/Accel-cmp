@@ -20,6 +20,7 @@
 #include "../data/readdata.h"
 #include "cuda.h"
 #include <cuda.h>
+#include <sys/time.h>
 
 void getInfo(int *threadsPerBlock, size_t *sharedMemPerBlock) {
   cudaDeviceProp deviceProp;
@@ -86,7 +87,8 @@ int main(int argc, char *argv[]) {
   int threadPerBlock;
   size_t sharedMemPerBlock;
   getInfo(&threadPerBlock, &sharedMemPerBlock);
-  printf("%i, %lu\n", threadPerBlock, sharedMemPerBlock);
+
+  timeval start, stop;
 
   //Read File(s)
   int m, n;
@@ -96,7 +98,11 @@ int main(int argc, char *argv[]) {
   float *h_D = (float *) malloc(sizeof(float) * m * n);
 
   //Do Computation
+  gettimeofday(&start, NULL);
   matrixMultiplyCUDA(h_A, h_A, h_C, n, threadPerBlock, sharedMemPerBlock);
+  gettimeofday(&stop, NULL);
+
+  printf("Time to run: %lu microseconds\n", stop.tv_usec - start.tv_usec);
 
   free(h_A); free(h_C); free(h_D);
 
