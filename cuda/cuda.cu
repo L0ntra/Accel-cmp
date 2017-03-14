@@ -16,47 +16,47 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <stdio.h>
-#include <stdlib.h>
+
+#include "../data/readdata.h"
+#include "cuda.h"
 #include <cuda.h>
+#include <sys/time.h>
 
-void dispInfo() {
-  int deviceCount;
+void getInfo(int *threadsPerBlock, size_t *sharedMemPerBlock) {
   cudaDeviceProp deviceProp;
-  cudaGetDeviceCount(&deviceCount);
-  printf("Num Cuda Devices: %i\n",deviceCount);
-  for(int i = 0; i <  deviceCount; i++) {
-    cudaGetDeviceProperties(&deviceProp, i);
-    printf("Name:         %s\n", deviceProp.name);
-    printf("Thrads/Block: %i\n", deviceProp.maxThreadsPerBlock);
-    printf("M.m:	  %i.%i\n", deviceProp.major, deviceProp.minor);
+  cudaGetDeviceProperties(&deviceProp, 0);
+  *threadsPerBlock = deviceProp.maxThreadsPerBlock;
+  *sharedMemPerBlock = deviceProp.sharedMemPerBlock;
+}
+
+__global__
+void matrixMultiplyTileKernel(float A[], float B[], float C[], int w) {
+  int j = blockDim.x * blockIdx.x + threadIdx.x; //COL
+  int i = blockDim.y * blockIdx.y + threadIdx.y; //ROW
+
+  float temp = 0;
+  __shared__ float s_A[TILE_WIDTH][TILE_WIDTH];
+  __shared__ float s_B[TILE_WIDTH][TILE_WIDTH];
+
+
+  for(int k = 0; k < w/TILE_WIDTH; k++) {
+    s_A[threadIdx.y][threadIdx.x] = A[i * w + k * TILE_WIDTH + threadIdx.x];
+    s_B[threadIdx.y][threadIdx.x] = B[(k * TILE_WIDTH + threadIdx.y) * w + j];
+    __syncthreads();
+
+    for(int h = 0; h < TILE_WIDTH; h++)
+      temp += s_A[threadIdx.y][h] * s_B[h][threadIdx.x];
+    __syncthreads();
   }
+
+  C[i * w + j] = temp;
 }
 
-
-void matrixMultiply(int* A, int* B, int* C, int n) {
-  for(int i = 0; i < n; i++)
-    for(int j = 0; j < n; j++)
-      for(int k = 0; k < n; k++)
-        C[i * n + j] += A[i * n + k] * B[k * n + j];
-}
-
-__global__ 
-void matrixMultiplyKernel(int* A, int* B, int* C, int n) {
-  int j = blockDim.x * blockIdx.x + threadIdx.x; //ROW
-  int i = blockDim.y * blockIdx.y + threadIdx.y; //COL
-
-  if((i < n) && (j < n)) {
-    int temp = 0;
-    for(int k = 0; k < n; k++)
-      temp += A[i * n + k] * B[k * n + j];
-    C[i * n + j] = temp;
-  }
-}
-
-void matrixMultiplyCUDA(int* A, int* B, int* C, int n) {
-  int size = n * n * sizeof(int);
-  int *d_A, *d_B, *d_C;
+void matrixMultiplyCUDA(float A[], float B[], float C[], int n, 
+                        int threadPerBlock, size_t sharedMemPerBlock) {
+  int size = n * n * sizeof(float);
+  float *d_A, *d_B, *d_C;
+  
   //Allocate
   cudaMalloc((void**) &d_A, size);
   cudaMalloc((void**) &d_B, size);
@@ -66,11 +66,12 @@ void matrixMultiplyCUDA(int* A, int* B, int* C, int n) {
   cudaMemcpy(d_A, A, size, cudaMemcpyHostToDevice);
   cudaMemcpy(d_B, B, size, cudaMemcpyHostToDevice);
 
-  dim3 dimGrid(ceil(n/32.0), ceil(n/32.0), 1);
-  dim3 dimBlock(32, 32, 1);
+  float blk = 32.0;
+  dim3 dimGrid(ceil(n/blk), ceil(n/blk), 1);
+  dim3 dimBlock(blk, blk, 1);
 
   //PerformCalculation
-  matrixMultiplyKernel<<<dimGrid, dimBlock>>>(d_A, d_B, d_C, n);
+  matrixMultiplyTileKernel<<<dimGrid, dimBlock>>>(d_A, d_B, d_C, n);
 
   //Copy Solution
   cudaMemcpy(C, d_C, size, cudaMemcpyDeviceToHost);
@@ -82,51 +83,29 @@ void matrixMultiplyCUDA(int* A, int* B, int* C, int n) {
 }
 
 int main(int argc, char *argv[]) {
-  dispInfo();
-  int n;
-  if(argc != 2
-  || (n = (int) strtol(argv[1], (char**) NULL, 10)) == 1
-  || n < 1) {
-    printf("Error: Call with int > 0\n");
-    return 1;
-  }
+  //Read Device
+  int threadPerBlock;
+  size_t sharedMemPerBlock;
+  getInfo(&threadPerBlock, &sharedMemPerBlock);
 
-  int h_A[n][n], h_B[n][n], h_C[n][n], h_D[n][n];
-  for(int i = 0; i < n; i++)
-    for(int j = 0; j < n; j++) {
-      h_A[i][j] = h_B[i][j] = i * n + j;
-      h_C[i][j] = h_D[i][j] = 0;
-    }
+  timeval start, stop;
 
-  matrixMultiply((int *) &h_A, (int *) &h_B, (int *) &h_C, n);
-  matrixMultiplyCUDA((int *) &h_A, (int *) &h_B, (int *) &h_D, n);
-  
-  for(int i = 0; i < n; i++) {
-    for(int j = 0; j < n; j++)
-      printf("%i ", h_A[i][j]);
-    printf("\n");
-  }
-  printf("\n");
+  //Read File(s)
+  int m, n;
+  char *filename = argv[1];
+  float *h_A = readfile(filename, &m, &n);
+  float *h_C = (float *) malloc(sizeof(float) * m * n);
+  float *h_D = (float *) malloc(sizeof(float) * m * n);
 
-  for(int i = 0; i < n; i++) {
-    for(int j = 0; j < n; j++)
-      printf("%i ", h_B[i][j]);
-    printf("\n");
-  }
-  printf("\n");
+  //Do Computation
+  gettimeofday(&start, NULL);
+  matrixMultiplyCUDA(h_A, h_A, h_C, n, threadPerBlock, sharedMemPerBlock);
+  gettimeofday(&stop, NULL);
 
-  for(int i = 0; i < n; i++) {
-    for(int j = 0; j < n; j++)
-      printf("%i ", h_C[i][j]);
-    printf("\n");
-  }
-  printf("\n");
+  printf("Time to run: %lu microseconds\n", stop.tv_usec - start.tv_usec);
 
-  for(int i = 0; i < n; i++) {
-    for(int j = 0; j < n; j++)
-      printf("%i ", h_D[i][j]);
-    printf("\n");
-  }  
+  free(h_A); free(h_C); free(h_D);
 
-  return 0;
+ return 0;
 }
+

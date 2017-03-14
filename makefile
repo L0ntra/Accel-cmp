@@ -8,7 +8,7 @@ Default:
 
 
 cuda:
-	$(MAKE) -C cuda
+	$(MAKE) -C cuda ARGS=${ARGS}
 
 phi:
 	$(MAKE) -C phi
