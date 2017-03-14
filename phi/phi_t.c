@@ -41,10 +41,9 @@ void vecMatrixMult(float data_A[], float data_B[], int n) {
   #pragma omp parallel for private(i, j, k) shared(sol, data_A, data_B, n)
   for(i = 0; i < n; i++)
     for(j = 0; j < n; j++) {
-      sol[i][j] = 0;
       #pragma omp simd
       for(k = 0; k < n; k++)
-        sol[i][j] += data_A[i][k] * data_B[k][j]; 
+        sol[j][i] += data_A[i][k] * data_B[j][k]; 
     }
   clock_gettime(CLOCK_REALTIME, &stop);
   
@@ -58,6 +57,8 @@ void vecMatrixMult(float data_A[], float data_B[], int n) {
  
   printf("Time to multoply %dX%d Matrix: %lus %lu microseconds.\n", 
          n, n, elap.tv_sec, elap.tv_nsec / 1000000);
+
+  free(sol);
 }
 
 ////MAIN
@@ -69,10 +70,11 @@ int main(int argc, char *argv[]) {
   float (* restrict data_A)[n] __attribute__((aligned(64))) = 
     readfile(filename, &m, &n);
   float (* restrict data_B)[n] __attribute__((aligned(64))) = 
-    readfile(filename, &m, &n);
-  float (* restrict sol)[n] __attribute__((aligned(64))) = readfile(filename, &m, &n);
+    readfile_transpose(filename, &m, &n);
 
   int n = atoi(argv[1]);
   vecMatrixMult(data_A, data_B, n);
+
+  free(data_A); free(data_B);
 }
 

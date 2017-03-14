@@ -21,3 +21,4 @@
 #include <string.h>
 
 float * readfile(const char* filename, int* m , int* n);
+float * readfile_transpose(const char* filename, int* m , int* n);
