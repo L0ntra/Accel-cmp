@@ -74,7 +74,7 @@ float * readfile_transpose(const char *filename, int *m, int *n) {
 // of the file are the dimensions of the array and remaining lines are the 
 // floting point values that fill the m x n arraiy.
 // *** REMEMBER TO FREE THE RETURNED ARRAY *** //
-int * readfile(const char *filename, int *m, int *n) {
+int * readfile_int(const char *filename, int *m, int *n) {
   FILE *file = fopen(filename, "r");
 
   //Read m and n from the first two lines 
@@ -99,7 +99,7 @@ int * readfile(const char *filename, int *m, int *n) {
 // 2 lines of the file are the dimensions of the array and remaining lines are the 
 // floting point values that fill the m x n arraiy.
 // *** REMEMBER TO FREE THE RETURNED ARRAY *** //
-int * readfile_transpose(const char *filename, int *m, int *n) {
+int * readfile_int_transpose(const char *filename, int *m, int *n) {
   FILE *file = fopen(filename, "r");
 
   //Read m and n from the first two lines 
