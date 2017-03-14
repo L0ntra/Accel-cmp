@@ -30,7 +30,8 @@ float * readfile(const char *filename, int *m, int *n) {
   fscanf(file, "%d", n);
 
   //Allocate the Array
-  float *data = (float *) malloc(sizeof(float) * (*m) * (*n));
+  float (* restrict data)[n] __attribute__((aligned(64))) = 
+    (float *) malloc(sizeof(float) * (*m) * (*n));
 
   //Fill the data
   for(int i = 0; i < *m; i++) {
@@ -43,8 +44,8 @@ float * readfile(const char *filename, int *m, int *n) {
   return data;
 }
 
-// Reads floating point data into an array from a file where the first 2 lines 
-// of the file are the dimensions of the array and remaining lines are the 
+// Reads floating point data into a transposed array from a file where the first 
+// 2 lines of the file are the dimensions of the array and remaining lines are the 
 // floting point values that fill the m x n arraiy.
 // *** REMEMBER TO FREE THE RETURNED ARRAY *** //
 float * readfile_transpose(const char *filename, int *m, int *n) {
@@ -55,12 +56,63 @@ float * readfile_transpose(const char *filename, int *m, int *n) {
   fscanf(file, "%d", n);
 
   //Allocate the Array
-  float *data = (float *) malloc(sizeof(float) * (*m) * (*n));
+  float (* restrict data)[n] __attribute__((aligned(64))) = 
+    (float *) malloc(sizeof(float) * (*m) * (*n));
 
   //Fill the data
   for(int i = 0; i < *m; i++) {
     for(int j = 0; j < *n; j++) {
       fscanf(file, "%f", &data[j * (*n) + i]);
+    }
+  }
+
+  fclose(file);
+  return data;
+}
+
+// Reads integer data into an array from a file where the first 2 lines 
+// of the file are the dimensions of the array and remaining lines are the 
+// floting point values that fill the m x n arraiy.
+// *** REMEMBER TO FREE THE RETURNED ARRAY *** //
+int * readfile(const char *filename, int *m, int *n) {
+  FILE *file = fopen(filename, "r");
+
+  //Read m and n from the first two lines 
+  fscanf(file, "%d", m);
+  fscanf(file, "%d", n);
+
+  //Allocate the Array
+  int (* restrict data)[n] __attribute__((aligned(64))) = (int *) malloc(sizeof(int) * (*m) * (*n));
+
+  //Fill the data
+  for(int i = 0; i < *m; i++) {
+    for(int j = 0; j < *n; j++) {
+      fscanf(file, "%d", &data[i * (*n) + j]);
+    }
+  }
+
+  fclose(file);
+  return data;
+}
+
+// Reads integer data into a transposed array from a file where the first 
+// 2 lines of the file are the dimensions of the array and remaining lines are the 
+// floting point values that fill the m x n arraiy.
+// *** REMEMBER TO FREE THE RETURNED ARRAY *** //
+int * readfile_transpose(const char *filename, int *m, int *n) {
+  FILE *file = fopen(filename, "r");
+
+  //Read m and n from the first two lines 
+  fscanf(file, "%d", m);
+  fscanf(file, "%d", n);
+
+  //Allocate the Array
+  int (* restrict data)[n] __attribute__((aligned(64))) = (float *) malloc(sizeof(int) * (*m) * (*n));
+
+  //Fill the data
+  for(int i = 0; i < *m; i++) {
+    for(int j = 0; j < *n; j++) {
+      fscanf(file, "%d", &data[j * (*n) + i]);
     }
   }
 

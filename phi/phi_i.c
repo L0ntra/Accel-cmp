@@ -25,12 +25,12 @@
 #include "../data/readdata.h"
 
 ////VECTOR MATRIX MULTIPLY
-void vecMatrixMult(float data_A[], float data_B[], int n) {
+void vecMatrixMult(int data_A[], int data_B[], int n) {
 
   int i, j, k;
   struct timespec start, stop, elap;
 
-  float (* restrict sol)[n] __attribute__((aligned(64)))= malloc(sizeof(float) * n * n);
+  int (* restrict sol)[n] __attribute__((aligned(64)))= malloc(sizeof(float) * n * n);
 
   #pragma omp parallel for private(i, j) shared(sol, data_A, data_B, n)
   for(i = 0; i < n; i++) 
@@ -66,11 +66,10 @@ int main(int argc, char *argv[]) {
   int m, n;
   char *filename = argv[1];
 
-  float (* restrict data_A)[n] __attribute__((aligned(64))) = 
-    readfile(filename, &m, &n);
-  float (* restrict data_B)[n] __attribute__((aligned(64))) = 
-    readfile(filename, &m, &n);
-  float (* restrict sol)[n] __attribute__((aligned(64))) = readfile(filename, &m, &n);
+  int (* restrict data_A)[n] __attribute__((aligned(64))) = 
+    readfile_int(filename, &m, &n);
+  int (* restrict data_B)[n] __attribute__((aligned(64))) = 
+    readfile_int(filename, &m, &n);
 
   int n = atoi(argv[1]);
   vecMatrixMult(data_A, data_B, n);
