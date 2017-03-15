@@ -32,11 +32,6 @@ void vecMatrixMult(float data_A[], float data_B[], int n) {
 
   float (* restrict sol)[n] __attribute__((aligned(64)))= malloc(sizeof(float) * n * n);
 
-  #pragma omp parallel for private(i, j) shared(sol, data_A, data_B, n)
-  for(i = 0; i < n; i++) 
-    for(j = 0; j < n; j++)
-      sol[i][j] = 0;
-  
   clock_gettime(CLOCK_REALTIME, &start);
   #pragma omp parallel for private(i, j, k) shared(sol, data_A, data_B, n)
   for(i = 0; i < n; i++)
@@ -58,6 +53,8 @@ void vecMatrixMult(float data_A[], float data_B[], int n) {
  
   printf("Time to multoply %dX%d Matrix: %lus %lu microseconds.\n", 
          n, n, elap.tv_sec, elap.tv_nsec / 1000000);
+
+  free(sol);
 }
 
 ////MAIN
@@ -73,6 +70,7 @@ int main(int argc, char *argv[]) {
 
   int n = atoi(argv[1]);
   vecMatrixMult(data_A, data_B, n);
+  free(data_A); free(data_B);
 }
 
 

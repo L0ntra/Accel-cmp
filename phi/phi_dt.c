@@ -25,21 +25,21 @@
 #include "../data/readdata.h"
 
 ////VECTOR MATRIX MULTIPLY
-void vecMatrixMult(int data_A[], int data_B[], int n) {
+void vecMatrixMult(double data_A[], double data_B[], int n) {
 
   int i, j, k;
   struct timespec start, stop, elap;
 
-  int (* restrict sol)[n] __attribute__((aligned(64)))= malloc(sizeof(int) * n * n);
+  double (* restrict sol)[n] __attribute__((aligned(64)))= malloc(sizeof(double) * n * n);
 
   clock_gettime(CLOCK_REALTIME, &start);
   #pragma omp parallel for private(i, j, k) shared(sol, data_A, data_B, n)
   for(i = 0; i < n; i++)
     for(j = 0; j < n; j++) {
-      sol[i][j] = 0;
+      sol[j][i] = 0;
       #pragma omp simd
       for(k = 0; k < n; k++)
-        sol[i][j] += data_A[i][k] * data_B[k][j]; 
+        sol[j][i] += data_A[i][k] * data_B[j][k]; 
     }
   clock_gettime(CLOCK_REALTIME, &stop);
   
@@ -62,10 +62,10 @@ int main(int argc, char *argv[]) {
   int m, n;
   char *filename = argv[1];
 
-  int (* restrict data_A)[n] __attribute__((aligned(64))) = 
-    readfile_int(filename, &m, &n);
-  int (* restrict data_B)[n] __attribute__((aligned(64))) = 
-    readfile_int(filename, &m, &n);
+  double (* restrict data_A)[n] __attribute__((aligned(64))) = 
+    readfile_double(filename, &m, &n);
+  double (* restrict data_B)[n] __attribute__((aligned(64))) = 
+    readfile_double_transpose(filename, &m, &n);
 
   int n = atoi(argv[1]);
   vecMatrixMult(data_A, data_B, n);

@@ -72,7 +72,7 @@ float * readfile_transpose(const char *filename, int *m, int *n) {
 
 // Reads integer data into an array from a file where the first 2 lines 
 // of the file are the dimensions of the array and remaining lines are the 
-// floting point values that fill the m x n arraiy.
+// integer point values that fill the m x n arraiy.
 // *** REMEMBER TO FREE THE RETURNED ARRAY *** //
 int * readfile_int(const char *filename, int *m, int *n) {
   FILE *file = fopen(filename, "r");
@@ -97,7 +97,7 @@ int * readfile_int(const char *filename, int *m, int *n) {
 
 // Reads integer data into a transposed array from a file where the first 
 // 2 lines of the file are the dimensions of the array and remaining lines are the 
-// floting point values that fill the m x n arraiy.
+// integer values that fill the m x n arraiy.
 // *** REMEMBER TO FREE THE RETURNED ARRAY *** //
 int * readfile_int_transpose(const char *filename, int *m, int *n) {
   FILE *file = fopen(filename, "r");
@@ -108,6 +108,59 @@ int * readfile_int_transpose(const char *filename, int *m, int *n) {
 
   //Allocate the Array
   int (* restrict data)[n] __attribute__((aligned(64))) = (float *) malloc(sizeof(int) * (*m) * (*n));
+
+  //Fill the data
+  for(int i = 0; i < *m; i++) {
+    for(int j = 0; j < *n; j++) {
+      fscanf(file, "%d", &data[j * (*n) + i]);
+    }
+  }
+
+  fclose(file);
+  return data;
+}
+
+
+// Reads Double percision Floating Point data into an array from a file where the first 
+// 2 lines of the file are the dimensions of the array and remaining lines are the Double
+// percision floting point values that fill the m x n arraiy.
+// *** REMEMBER TO FREE THE RETURNED ARRAY *** //
+double * readfile_double(const char *filename, int *m, int *n) {
+  FILE *file = fopen(filename, "r");
+
+  //Read m and n from the first two lines 
+  fscanf(file, "%d", m);
+  fscanf(file, "%d", n);
+
+  //Allocate the Array
+  double (* restrict data)[n] __attribute__((aligned(64))) = 
+    (int *) malloc(sizeof(double) * (*m) * (*n));
+
+  //Fill the data
+  for(int i = 0; i < *m; i++) {
+    for(int j = 0; j < *n; j++) {
+      fscanf(file, "%lf", &data[i * (*n) + j]);
+    }
+  }
+
+  fclose(file);
+  return data;
+}
+
+// Reads Double percision Floating Point data into a transposed array from a file where 
+// the first 2 lines are the dimensions of the array and remaining lines are the Double
+// percision floting point values that fill the m x n arraiy.
+// *** REMEMBER TO FREE THE RETURNED ARRAY *** //
+double * readfile_double_transpose(const char *filename, int *m, int *n) {
+  FILE *file = fopen(filename, "r");
+
+  //Read m and n from the first two lines 
+  fscanf(file, "%d", m);
+  fscanf(file, "%d", n);
+
+  //Allocate the Array
+  double (* restrict data)[n] __attribute__((aligned(64))) = 
+    (double *) malloc(sizeof(int) * (*m) * (*n));
 
   //Fill the data
   for(int i = 0; i < *m; i++) {

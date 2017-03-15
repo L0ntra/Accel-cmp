@@ -32,15 +32,11 @@ void vecMatrixMult(float data_A[], float data_B[], int n) {
 
   float (* restrict sol)[n] __attribute__((aligned(64)))= malloc(sizeof(float) * n * n);
 
-  #pragma omp parallel for private(i, j) shared(sol, data_A, data_B, n)
-  for(i = 0; i < n; i++) 
-    for(j = 0; j < n; j++)
-      sol[i][j] = 0;
-  
   clock_gettime(CLOCK_REALTIME, &start);
   #pragma omp parallel for private(i, j, k) shared(sol, data_A, data_B, n)
   for(i = 0; i < n; i++)
     for(j = 0; j < n; j++) {
+      sol[j][i] = 0;
       #pragma omp simd
       for(k = 0; k < n; k++)
         sol[j][i] += data_A[i][k] * data_B[j][k]; 

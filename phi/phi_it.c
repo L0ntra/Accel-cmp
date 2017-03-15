@@ -36,10 +36,10 @@ void vecMatrixMult(int data_A[], int data_B[], int n) {
   #pragma omp parallel for private(i, j, k) shared(sol, data_A, data_B, n)
   for(i = 0; i < n; i++)
     for(j = 0; j < n; j++) {
-      sol[i][j] = 0;
+      sol[j][i] = 0;
       #pragma omp simd
       for(k = 0; k < n; k++)
-        sol[i][j] += data_A[i][k] * data_B[k][j]; 
+        sol[j][i] += data_A[i][k] * data_B[j][k]; 
     }
   clock_gettime(CLOCK_REALTIME, &stop);
   
@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
   int (* restrict data_A)[n] __attribute__((aligned(64))) = 
     readfile_int(filename, &m, &n);
   int (* restrict data_B)[n] __attribute__((aligned(64))) = 
-    readfile_int(filename, &m, &n);
+    readfile_int_transpose(filename, &m, &n);
 
   int n = atoi(argv[1]);
   vecMatrixMult(data_A, data_B, n);
