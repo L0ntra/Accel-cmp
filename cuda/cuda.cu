@@ -15,9 +15,9 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-
-
-#include "../data/readdata.h"
+extern "C" { //Fixes linking issue with c files
+	#include "../data/readdata.h"
+}
 #include "cuda.h"
 #include <cuda.h>
 #include <sys/time.h>

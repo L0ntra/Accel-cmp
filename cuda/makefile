@@ -1,5 +1,5 @@
 Default:
-	nvcc cuda.cu ../data/readdata.cu -o cuda.out
+	nvcc cuda.cu ../data/readdata.c -o cuda.out
 	./cuda.out ../data/${ARGS}
 
 test:
