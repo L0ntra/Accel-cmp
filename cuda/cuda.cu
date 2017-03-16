@@ -94,17 +94,17 @@ int main(int argc, char *argv[]) {
   int m, n;
   char *filename = argv[1];
   float *h_A = readfile(filename, &m, &n);
+  float *h_B = readfile_transpose(filename, &m, &n);
   float *h_C = (float *) malloc(sizeof(float) * m * n);
-  float *h_D = (float *) malloc(sizeof(float) * m * n);
 
   //Do Computation
   gettimeofday(&start, NULL);
-  matrixMultiplyCUDA(h_A, h_A, h_C, n, threadPerBlock, sharedMemPerBlock);
+  matrixMultiplyCUDA(h_A, h_B, h_C, n, threadPerBlock, sharedMemPerBlock);
   gettimeofday(&stop, NULL);
 
   printf("Time to run: %lu microseconds\n", stop.tv_usec - start.tv_usec);
 
-  free(h_A); free(h_C); free(h_D);
+  free(h_A); free(h_B); free(h_C);
 
  return 0;
 }
