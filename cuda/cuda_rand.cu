@@ -20,7 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/time.h>
+#include <time.h>
 
 void getInfo(int *threadsPerBlock, size_t *sharedMemPerBlock) {
   cudaDeviceProp deviceProp;
@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
   size_t sharedMemPerBlock;
   getInfo(&threadPerBlock, &sharedMemPerBlock);
 
-  timeval start, stop;
+  struct timespec start, stop, elap;
 
   //Read File(s)
   int m, n;
@@ -103,17 +103,32 @@ int main(int argc, char *argv[]) {
   srand(0);
   for(int i = 0; i < m; i++) {
     for(int j = 0; j < n; j++) {
-      h_A[i * m + j] = rand();
-      h_B[j * n + i] = rand();
+      h_A[i * m + j] = 1; //rand();
+      h_B[j * n + i] = 1; //rand();
     }
   }
 
+  printf("start\n");
   //Do Computation
-  gettimeofday(&start, NULL);
+  clock_gettime(CLOCK_REALTIME, &start);
   matrixMultiplyCUDA(h_A, h_B, h_C, n, threadPerBlock, sharedMemPerBlock);
-  gettimeofday(&stop, NULL);
+  clock_gettime(CLOCK_REALTIME, &stop);
 
-  printf("Time to run: %lu microseconds\n", stop.tv_usec - start.tv_usec);
+  if((stop.tv_nsec - start.tv_nsec) < 0) {
+    elap.tv_sec  = stop.tv_sec  - start.tv_sec  - 1;
+    elap.tv_nsec = stop.tv_nsec - start.tv_nsec + 1000000000;
+  } else {
+    elap.tv_sec  = stop.tv_sec  - start.tv_sec;
+    elap.tv_nsec = stop.tv_nsec - start.tv_nsec;
+  }
+
+  printf("Time to multoply %dX%d Matrix: %lus %lu microseconds.\n",
+    m, n, elap.tv_sec, elap.tv_nsec / 1000000);
+ 
+  for(int i = 0; i < m; i++) 
+    for(int j = 0; j < n; j++)
+      if(h_C[i * m + j] != m)
+        printf("%f ", h_C[i * m + j]);
 
   free(h_A); free(h_B); free(h_C);
 
