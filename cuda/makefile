@@ -5,5 +5,9 @@ Default:
 test:
 	./cuda.out ../data/testdata.txt 
 
+rand:
+	nvcc cuda_rand.cu -o cuda_rand.out
+	./cuda_rand.out ${ARGS}
+
 clean:
 	rm *.out
