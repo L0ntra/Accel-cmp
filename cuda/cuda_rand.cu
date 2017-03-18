@@ -30,29 +30,32 @@ void getInfo(int *threadsPerBlock, size_t *sharedMemPerBlock) {
 }
 
 __global__
-void matrixMultiplyTileKernel(float A[], float B[], float C[], int w) {
-  int j = blockDim.x * blockIdx.x + threadIdx.x; //COL
-  int i = blockDim.y * blockIdx.y + threadIdx.y; //ROW
-
+void matrixMultiplyTileKernel(float * A, float * B, float * C, int w) {
   float temp = 0;
   __shared__ float s_A[TILE_WIDTH][TILE_WIDTH];
   __shared__ float s_B[TILE_WIDTH][TILE_WIDTH];
+  
+  int tx = threadIdx.x; int ty = threadIdx.y;
 
+  int row = blockIdx.y * blockDim.y + threadIdx.y;
+  int col = blockIdx.x * blockDim.x + threadIdx.x;
 
-  for(int k = 0; k < w/TILE_WIDTH; k++) {
-    s_A[threadIdx.y][threadIdx.x] = A[i * w + k * TILE_WIDTH + threadIdx.x];
-    s_B[threadIdx.y][threadIdx.x] = B[(k * TILE_WIDTH + threadIdx.y) * w + j];
+  for(int i = 0; i < (w - 1)/TILE_WIDTH + 1; i++) {
+    s_A[ty][tx] = 
+      (row < w && i * TILE_WIDTH + tx < w) ? A[row * w + i * TILE_WIDTH + tx] : 0;
+    s_B[ty][tx] = 
+      (col < w && (i * TILE_WIDTH + ty) < w) ? B[(i * TILE_WIDTH + ty) * w + col] : 0;
     __syncthreads();
 
-    for(int h = 0; h < TILE_WIDTH; h++)
-      temp += s_A[threadIdx.y][h] * s_B[h][threadIdx.x];
+    for(int i = 0; i < TILE_WIDTH; i++)
+      temp += s_A[ty][i] * s_B[i][tx];
     __syncthreads();
   }
 
-  C[i * w + j] = temp;
+  C[row * w + col] = temp;
 }
 
-void matrixMultiplyCUDA(float A[], float B[], float C[], int n, 
+void matrixMultiplyCUDA(float * A, float * B, float *C, int n, 
                         int threadPerBlock, size_t sharedMemPerBlock) {
   int size = n * n * sizeof(float);
   float *d_A, *d_B, *d_C;
@@ -60,7 +63,7 @@ void matrixMultiplyCUDA(float A[], float B[], float C[], int n,
   //Allocate
   cudaMalloc((void**) &d_A, size);
   cudaMalloc((void**) &d_B, size);
-  cudaMalloc((void**) &d_C, size);
+  cudaMalloc((float**) &d_C, size);
 
   //Copy Memory
   cudaMemcpy(d_A, A, size, cudaMemcpyHostToDevice);
@@ -103,8 +106,8 @@ int main(int argc, char *argv[]) {
   srand(0);
   for(int i = 0; i < m; i++) {
     for(int j = 0; j < n; j++) {
-      h_A[i * m + j] = 1; //rand();
-      h_B[j * n + i] = 1; //rand();
+      h_A[i * m + j] = rand();
+      h_B[j * n + i] = rand();
     }
   }
 
@@ -125,10 +128,13 @@ int main(int argc, char *argv[]) {
   printf("Time to multoply %dX%d Matrix: %lus %lu microseconds.\n",
     m, n, elap.tv_sec, elap.tv_nsec / 1000000);
  
-  for(int i = 0; i < m; i++) 
+/*  for(int i = 0; i < m; i++) {
     for(int j = 0; j < n; j++)
       if(h_C[i * m + j] != m)
         printf("%f ", h_C[i * m + j]);
+    printf("\n");
+  }
+*/
 
   free(h_A); free(h_B); free(h_C);
 
