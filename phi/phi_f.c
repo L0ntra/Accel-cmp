@@ -5,32 +5,42 @@
 #include <omp.h>
 #include <time.h>
 
-#define NNN 1024
+#define NNN 2048
+#define MMIC mic:2
 
-__declspec (target(mic:2)) float data_A[NNN][NNN] __attribute__((aligned(64)));
-__declspec (target(mic:2)) float data_B[NNN][NNN]__attribute__((aligned(64)));
-__declspec (target(mic:2)) float sol[NNN][NNN] __attribute__((aligned(64)));
+__declspec (target(MMIC)) float data_A[NNN][NNN] __attribute__((aligned(64)));
+__declspec (target(MMIC)) float data_B[NNN][NNN]__attribute__((aligned(64)));
+__declspec (target(MMIC)) float sol[NNN][NNN] __attribute__((aligned(64)));
 
 
 ////VECTOR MATRIX MULTIPLY
 void vecMatrixMult() {
   //Alloc
-  int i, j, k;
+  int i, j, k, numthreads;
   struct timespec start, stop, elap;
+  srand(0);
+
+  printf("Initializing\r\n");
+  #pragma offload target(mic:2)
+  #pragma omp parallel
+  #pragma omp master
+  numthreads = omp_get_num_threads();
 
   //Fill Data
-  #pragma offload target(mic:2) 
+  #pragma offload target(MMIC) 
   #pragma omp parallel for private(i, j) shared(data_A, data_B, sol)
   for(i = 0; i < NNN ; i++) 
     for(j = 0; j < NNN; j++) {
-      data_A[i][j] = 1.1;
-      data_B[i][j] = 1.1;
+      data_A[i][j] = rand();
+      data_B[i][j] = rand();
       sol[i][j] = 0;
     }
+
+  printf("Starting Compute on %d threads\r\n",numthreads);
   
   //Calc
   clock_gettime(CLOCK_REALTIME, &start);
-  #pragma offload target(mic:2)
+  #pragma offload target(MMIC)
   #pragma omp parallel for private(i, j)  
   for(i = 0; i < NNN; i++)
     for(j = 0; j < NNN; j++) {
