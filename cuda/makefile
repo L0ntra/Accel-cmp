@@ -9,5 +9,8 @@ rand:
 	nvcc cuda_rand.cu -o cuda_rand.out
 	./cuda_rand.out ${ARGS}
 
+matmult:
+	nvcc matrix_mult.cu -o matmult
+
 clean:
 	rm *.out
