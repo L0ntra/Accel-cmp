@@ -12,7 +12,6 @@ __declspec (target(MMIC)) float data_A[NNN][NNN] __attribute__((aligned(64)));
 __declspec (target(MMIC)) float data_B[NNN][NNN]__attribute__((aligned(64)));
 __declspec (target(MMIC)) float sol[NNN][NNN] __attribute__((aligned(64)));
 
-
 ////VECTOR MATRIX MULTIPLY
 void vecMatrixMult() {
   //Alloc
@@ -21,27 +20,31 @@ void vecMatrixMult() {
   srand(0);
 
   printf("Initializing\r\n");
-  #pragma offload target(mic:2)
+/*  #pragma offload target(MMIC)
   #pragma omp parallel
   #pragma omp master
-  numthreads = omp_get_num_threads();
+  { numthreads = omp_get_num_threads(); }
+*/
 
+  printf("start rand\n");
   //Fill Data
   #pragma offload target(MMIC) 
-  #pragma omp parallel for private(i, j) shared(data_A, data_B, sol)
-  for(i = 0; i < NNN ; i++) 
+  #pragma omp parallel for private(i, j), shared(data_A, data_B, sol)
+  for(i = 0; i < NNN ; i++)
     for(j = 0; j < NNN; j++) {
-      data_A[i][j] = rand();
-      data_B[i][j] = rand();
+      data_A[i][j] = 1.1; //rand();
+      data_B[i][j] = 1.1; //rand();
       sol[i][j] = 0;
-    }
-
-  printf("Starting Compute on %d threads\r\n",numthreads);
+    } 
+  printf("end rand\n");
+  int loop = 0;
+//  printf("Starting Compute on %d threads\r\n",numthreads);
+  for(loop; loop < 40; loop++) {
   
   //Calc
   clock_gettime(CLOCK_REALTIME, &start);
   #pragma offload target(MMIC)
-  #pragma omp parallel for private(i, j)  
+  #pragma omp parallel for private(i, j, k)  
   for(i = 0; i < NNN; i++)
     for(j = 0; j < NNN; j++) {
       #pragma omp simd
@@ -58,9 +61,14 @@ void vecMatrixMult() {
     elap.tv_nsec = stop.tv_nsec - start.tv_nsec;
   }
  
-  //print
-  printf("Time to multoply %dX%d Matrix: %lus %lu microseconds.\n", 
-         NNN, NNN, elap.tv_sec, elap.tv_nsec / 1000000);
+  printf("%lu.%lu\n", elap.tv_sec, elap.tv_nsec / 1000000);
+
+  /*
+  for(i = 0; i < NNN; i++)
+    for(j = 0; j < NNN; j++)
+      printf("%f ", sol[i][j]);
+  */
+  }
 }
 
 
