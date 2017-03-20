@@ -32,8 +32,8 @@ void vecMatrixMult() {
   #pragma omp parallel for private(i, j), shared(data_A, data_B, sol)
   for(i = 0; i < NNN ; i++)
     for(j = 0; j < NNN; j++) {
-      data_A[i][j] = 1.1; //rand();
-      data_B[i][j] = 1.1; //rand();
+      data_A[i][j] = rand();
+      data_B[i][j] = rand();
       sol[i][j] = 0;
     } 
   printf("end rand\n");
